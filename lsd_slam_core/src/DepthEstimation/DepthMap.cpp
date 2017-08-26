@@ -193,7 +193,6 @@ void DepthMap::observeDepth()
 /// \param pepy
 /// \param stats
 /// \return
-///求取极线单位向量；同时去掉梯度和极线方向垂直的情况；去掉在极线上梯度不分明的情况
 bool DepthMap::makeAndCheckEPL(const int x, const int y, const Frame* const ref, float* pepx, float* pepy, RunningStats* const stats)
 {
 	int idx = x+y*width;
@@ -202,13 +201,7 @@ bool DepthMap::makeAndCheckEPL(const int x, const int y, const Frame* const ref,
 	// calculate the plane spanned by the two camera centers and the point (x,y,1)
 	// intersect it with the keyframe's image plane (at depth=1)
     //这里假设两帧间的旋转很小，所以位姿变换只考虑了平移
-    /*
-     * 极线l=K'.inverse()*t^*R*P*K.inverse()，其中R被简化成为了单位阵
-     * 极线的三个元素分别为A，B，C；Ax+By+C=0
-     * 得到极线方向用向量表示就是下面的epx和epy，具体:x/y=-B/A
-     * 	epx =fx*((u-cx)/fx*tz-tx);
-     *  epy =fy*((v-cy)/fy*tz-ty);
-    */
+
 	float epx = - fx * ref->thisToOther_t[0] + ref->thisToOther_t[2]*(x - cx);
 	float epy = - fy * ref->thisToOther_t[1] + ref->thisToOther_t[2]*(y - cy);
 
@@ -230,7 +223,6 @@ bool DepthMap::makeAndCheckEPL(const int x, const int y, const Frame* const ref,
 	float gy = activeKeyFrameImageData[idx+width] - activeKeyFrameImageData[idx-width];
 	float eplGradSquared = gx * epx + gy * epy;
 	eplGradSquared = eplGradSquared*eplGradSquared / eplLengthSquared;	// square and norm with epl-length
-    //极线上，梯度越分明，效果越好。。。。所以去掉梯度不够分明的情况
 	if(eplGradSquared < MIN_EPL_GRAD_SQUARED)
 	{
 		if(enablePrintDebugInfo) stats->num_observe_skipped_small_epl_grad++;
@@ -239,7 +231,6 @@ bool DepthMap::makeAndCheckEPL(const int x, const int y, const Frame* const ref,
 
 
 	// ===== check epl-grad angle ======
-    //梯度方向和极线方向不能垂直(下面得到的是cos(theta))
 	if(eplGradSquared / (gx*gx+gy*gy) < MIN_EPL_ANGLE_SQUARED)
 	{
 		if(enablePrintDebugInfo) stats->num_observe_skipped_small_epl_angle++;
@@ -689,11 +680,6 @@ void DepthMap::propagateDepth(Frame* new_keyframe)
 
 ///
 /// \brief DepthMap::regularizeDepthMapFillHolesRow
-/// **************************************************
-/// 在当前关键帧已经实现部分像素的深度估计的基础上，
-/// 针对当前关键帧的剩余像素，为这些像素，通过周围(5x5方格）已知深度的像素实现深度融合
-/// 从而获取这些像素的深度值
-/// **************************************************
 /// \param yMin
 /// \param yMax
 /// \param stats
@@ -867,9 +853,6 @@ template<bool removeOcclusions> void DepthMap::regularizeDepthMapRow(int validit
 
 
 				}
-            //若当前像素附近5x5方格内的有效观测次数不够25次，则跳过，并设置当前值为无效点
-            //主要是考虑往往某个点被观测到也就意味着它周围肯定也有不少点被观测到
-            //或者说这些点被“多次"观测到，这里的validityTH就是要求观测到的次数限制
 			if(val_sum < validityTH)
 			{
 				dest->isValid = false;
