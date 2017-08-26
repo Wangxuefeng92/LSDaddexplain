@@ -373,7 +373,7 @@ SE3 SE3Tracker::trackFrame(
 				//Sophus::SE3f new_referenceToFrame = referenceToFrame * Sophus::SE3f::exp((inc));
 
 				// re-evaluate residual
-                //***每次迭代都需要重新更新buff，因为由于图像的非凸性，像素梯度需要根据不同的像素位置进行不断修正，而且3D点在当前帧的位姿也会发生变化
+                
 				callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, new_referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
 				if(buf_warped_size < MIN_GOODPERALL_PIXEL_ABSMIN* (width>>lvl)*(height>>lvl))
 				{
@@ -998,8 +998,7 @@ float SE3Tracker::calcResidualAndBuffers(
 		*(buf_warped_x+idx) = Wxp(0);
 		*(buf_warped_y+idx) = Wxp(1);
 		*(buf_warped_z+idx) = Wxp(2);
-        //TODO：每一次迭代都需要更新这个像素梯度，因为整个雅克比矩阵就这个会变化
-		*(buf_warped_dx+idx) = fx_l * resInterp[0];
+        		*(buf_warped_dx+idx) = fx_l * resInterp[0];
 		*(buf_warped_dy+idx) = fy_l * resInterp[1];
 		*(buf_warped_residual+idx) = residual;
 
